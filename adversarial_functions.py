@@ -1,5 +1,7 @@
 import torch
 import torch.nn.functional as F
+from PIL import Image
+from torchvision import transforms
 
 def fgsm_attack(image, epsilon, data_grad):
     """
@@ -156,4 +158,34 @@ def gaussian_blur(image, kernel_size=5, sigma=0):
     """
     blurred_image = F.gaussian_blur(image, kernel_size=kernel_size, sigma=sigma)
     return blurred_image
+
+def load_image(image_path):
+    # Load the image
+    image = Image.open(image_path).convert('RGB')
+    
+    # Transform the image
+    transform = transforms.Compose([
+        transforms.Resize((299, 299)),  # Resize to the input size expected by InceptionV3
+        transforms.ToTensor(),  # Convert to tensor
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # Normalize like ImageNet
+    ])
+    
+    image_tensor = transform(image).unsqueeze(0)  # Add batch dimension
+    return image_tensor
+
+
+def main():
+    model = InceptionV3(pretrained=True).load_state_dict(torch.load('InceptionV3.pth'))
+    image_tensor = load_image('path_to_stop_sign.png')
+    print(image_tensor.shape)
+    image_tensor.requires_grad = True
+
+    # Forward pass
+    output = model(image_tensor)
+    label = output.max(1, keepdim=True)[1]  # Get the label index for calculating gradient
+    loss = criterion(output, label)
+
+
+
+     
 
